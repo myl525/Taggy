@@ -1,0 +1,51 @@
+$pink: #FB7299;
+* {
+    box-sizing: border-box;
+}
+
+.top-nav-bar {
+    border-bottom: solid 1px lightgray;
+    justify-content: space-between;
+}
+
+.home-btn {
+    background-color: $pink;
+    text-transform: capitalize;
+    border: none;
+    font-weight: bold;
+    outline: none;
+    font-size: 18px;
+    transition: color 0.3s;
+    margin-left: 16px;
+    color: white;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.tab-btn {
+    background-color: transparent;
+    text-transform: capitalize;
+    border: none;
+    font-weight: bold;
+    outline: none;
+    font-size: 18px;
+    transition: color 0.3s;
+    margin: 0 8px;
+}
+
+.tab-btn:hover {
+    color: $pink;
+    transition: color 0.3s;
+}
+
+.tab-btn-clicked {
+    background-color: transparent;
+    text-transform: capitalize;
+    border: none;
+    font-weight: bold;
+    outline: none;
+    font-size: 18px;
+    margin: 0 8px;
+    transition: color 0.3s;
+    color: #FB7299;
+}
