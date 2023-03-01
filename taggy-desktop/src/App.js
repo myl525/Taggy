@@ -1,8 +1,18 @@
+import React, { useState } from 'react';
 
-function App() {
+import TopNavBar from "./components/TopNavBar";
+
+const section = (props) => {
+  
+}
+
+
+const App = () => {
+  const [current, setCurrent] = useState('HomePage');
+
   return (
     <div className="App">
-      <h1>Hello World!</h1>
+      <TopNavBar />
     </div>
   );
 }
