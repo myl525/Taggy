@@ -1,0 +1,26 @@
+$pink: #FB7299;
+
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px;
+}
+
+ul {
+    display: flex;
+}
+
+li {
+    list-style: none;
+    padding: 0 4px;
+}
+
+a{
+    text-decoration: none;
+    color: inherit;
+}
+
+.top-nav a:hover {
+    color: #FB7299;
+}
