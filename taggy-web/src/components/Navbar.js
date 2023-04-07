@@ -1,17 +1,18 @@
 import React, {useState} from 'react';
+import { Link } from 'react-router-dom';
 import { Search, Folder } from 'react-bootstrap-icons';
 import './style.scss';
 
 // sections, link to video / image / music pages
 const Section = (props) => {
     return(
-        <a className="navbar-section" href={props.link}>{props.sectionName}</a>
+        <Link className="navbar-section" to={props.link}>{props.sectionName}</Link>
     )
 }
 const Sections = (props) => {
     const listOfSections = props.sections.map((section) => {
         return(
-            <Section link={section.link} sectionName={section.sectionName} />
+            <Section key={section.sectionName} link={section.link} sectionName={section.sectionName} />
         )
     });
 
@@ -47,15 +48,15 @@ const SearchBar = () => {
 const Options = (props) => {
     return(
         <div className="navbar-options">
-            <button id="dirsBtn" className="navbar-options-btn">
+            <Link id="dirsBtn" className="navbar-options-btn" to="/settings">
                 <Folder />
-            </button>
+            </Link>
         </div>
     )
 }
 
 const Navbar = (props) => {
-    const sections = [{link: '#', sectionName: 'video'}];
+    const sections = [{link: '/video', sectionName: 'video'}];
 
     return(
         <nav className="navbar">

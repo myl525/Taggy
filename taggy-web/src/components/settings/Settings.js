@@ -30,30 +30,71 @@ const AddDirsBtn = () => {
 }
 
 const SelectDirModal = () => {
-    // TODO: handle click dir entry, handle click cancel / confirm button
+    // TODO: handle click cancel / confirm button
     const [val, setVal] = useState('');
     const [dirs, setDirs] = useState([]);
-    const [dir, setDir] = useState('');
+    const [error, setError] = useState(false);
 
     // handle input change
-    const handleInputChange = (evt) => {
+    const handleInputChange = async (evt) => {
+        const newVal = evt.target.value;
         // update val
-        setVal(evt.target.value);
+        setVal(newVal);
         // update directorys based on val
-        
+        if(newVal.endsWith('/')) {
+            const data = await getChildDirectory(newVal);
+            if(data.error) {
+                setError(e => true);
+            }else {
+                if(error) {
+                    setError(e => false);
+                }
+                setDirs(data.children);
+            }
+        }
     } 
-    
+    const getChildDirectory = async (path) => {
+        const res = await fetch('/api/settings/library/getChildDirectory?path=' + path);
+        const data = await res.json();
+        return data;
+    }
 
-
+    // handle click dir entry
+    const handleDirClick = async (evt) => {
+        const path = evt.target.textContent;
+        const data = await getChildDirectory(path);
+        if(data.error) {
+            setDirs([]);
+        }else {
+            setDirs(data.children);
+        }
+        setVal(val => path);
+    }
 
     // generate list of directorys
     const listOfDirs = dirs.map((dir) => {
         return(
-            <li className="directory">
+            <li key={dir} className="directory" onClick={handleDirClick}>
                 {dir}
             </li>
         )
     })
+
+
+    // modal body
+    const modalBody = () => {
+        if(!error) {
+            return(
+                <ul>
+                    {listOfDirs}
+                </ul>
+            )
+        }else {
+            return(
+                <h1>No such file or directory</h1>
+            )
+        }
+    }
 
     return(
         <div id="selectDirModal" className="select-dir-modal">
@@ -62,10 +103,8 @@ const SelectDirModal = () => {
             </div>
             <br />
             <div className="modal-body">
-                <input type="text" onChange={handleInputChange}/>
-                <ul>
-                    {listOfDirs}
-                </ul>
+                <input type="text" onChange={handleInputChange} value={val} />
+                {modalBody()}
             </div>
             <br />
             <div className="modal-footer">
@@ -85,8 +124,10 @@ const SelectDirModal = () => {
 const Library = () => {
     return(
         <div className="library">
-           <ExistingDirs /> 
-           <AddDirsBtn />
+            <h1>Library</h1>
+            <ExistingDirs /> 
+            <AddDirsBtn />
+            <SelectDirModal />
         </div>
     )
 }
@@ -98,3 +139,5 @@ const Settings = () => {
         </div>
     )
 }
+
+export default Settings;
