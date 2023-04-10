@@ -22,10 +22,9 @@ const AddedDirs = (props) => {
 }
 
 // button for opening select directory modal
-const AddDirsBtn = () => {
-    // TODO : handle onclick
+const AddDirsBtn = ({ handleOnClick }) => {
     return(
-        <button id="addDirsBtn">
+        <button id="addDirsBtn" onClick={handleOnClick}>
             Add Directory
         </button>
     )
@@ -118,10 +117,10 @@ const ModalBody = (props) => {
         </div>
     )
 }
-const ModalFooter = () => {
+const ModalFooter = ({handleCloseModal}) => {
     return(
         <div className="modal-footer">
-            <button>
+            <button onClick={handleCloseModal}>
                 Cancel
             </button>
             <button>
@@ -131,27 +130,35 @@ const ModalFooter = () => {
     )
 }
 
-const SelectDirModal = () => {
-    return(
-        <div id="selectDirModal" className="select-dir-modal">
-            <ModalHeader />
-            <br />
-            <ModalBody />
-            <br />
-            <ModalFooter />
-        </div>
-    )
+const SelectDirModal = ({show, handleCloseModal}) => {
+    if(show) {
+        return(
+            <div id="selectDirModal" className="select-dir-modal" >
+                <div className='modal-content'>
+                    <ModalHeader />
+                    <br />
+                    <ModalBody />
+                    <br />
+                    <ModalFooter handleCloseModal={handleCloseModal} /> 
+                </div>
+            </div>
+        )
+    }else {
+        return null;
+    }
 }
 
 // library setting
 const Library = () => {
+    const [show, setShow] = useState(false);
+
     // TODO get added dirs from database
     return(
         <div className="library">
             <h1>Library</h1>
             <AddedDirs /> 
-            <AddDirsBtn />
-            <SelectDirModal />
+            <AddDirsBtn handleOnClick={e => {setShow(true)}}/>
+            <SelectDirModal show={show} handleCloseModal={e => {setShow(false)}} />
         </div>
     )
 }
