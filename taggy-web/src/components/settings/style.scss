@@ -17,8 +17,9 @@
 .modal-content {
     background-color: white;
     width: 30%;
+    height: 60%;
+    overflow: scroll;
     margin-top: 3rem;
-    
 }
 
 .modal-body li {

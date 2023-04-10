@@ -14,7 +14,7 @@ const AddedDir = (props) => {
     )
 }
 const AddedDirs = (props) => {
-    // scan database and get all selected directorys
+    // TODO scan database and get all selected directorys
     return(
         <div className="added-dirs">
         </div>
@@ -133,8 +133,8 @@ const ModalFooter = ({handleCloseModal}) => {
 const SelectDirModal = ({show, handleCloseModal}) => {
     if(show) {
         return(
-            <div id="selectDirModal" className="select-dir-modal" >
-                <div className='modal-content'>
+            <div id="selectDirModal" className="select-dir-modal" onClick={handleCloseModal}>
+                <div className='modal-content' onClick={evt => {evt.stopPropagation()}}>
                     <ModalHeader />
                     <br />
                     <ModalBody />
@@ -151,14 +151,16 @@ const SelectDirModal = ({show, handleCloseModal}) => {
 // library setting
 const Library = () => {
     const [show, setShow] = useState(false);
-
     // TODO get added dirs from database
     return(
         <div className="library">
             <h1>Library</h1>
             <AddedDirs /> 
-            <AddDirsBtn handleOnClick={e => {setShow(true)}}/>
-            <SelectDirModal show={show} handleCloseModal={e => {setShow(false)}} />
+            <AddDirsBtn handleOnClick={evt => {setShow(true)}}/>
+            <SelectDirModal 
+                show={show} 
+                handleCloseModal={evt => {setShow(false)}}
+            />
         </div>
     )
 }
