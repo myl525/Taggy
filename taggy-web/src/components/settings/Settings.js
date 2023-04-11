@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './style.scss';
 
 // added directories, directories that are added to the library 
-const AddedDir = (props) => {
+const AddedDir = ({path}) => {
     return(
         <div className="added-dir">
-            <span>{props.path}</span>
+            <span>{path}</span>
             <div className="options">
                 <button className="option">Edit</button>
                 <button className="option">Delete</button>
@@ -13,10 +13,16 @@ const AddedDir = (props) => {
         </div>
     )
 }
-const AddedDirs = (props) => {
-    // TODO scan database and get all selected directorys
+const AddedDirs = ({addedDirs, setAddedDirs}) => {
+    const listOfAddedDirs = addedDirs.map((addedDir) => {
+        return(
+            <AddedDir key={addedDir} path={addedDir} />
+        )
+    })
+
     return(
         <div className="added-dirs">
+            {listOfAddedDirs}
         </div>
     )
 }
@@ -38,8 +44,7 @@ const ModalHeader = () => {
         </div>
     )
 }
-const ModalBody = (props) => {
-    const [path, setPath] = useState('');
+const ModalBody = ({path, setPath}) => {
     const [dirs, setDirs] = useState([]);
     const [error, setError] = useState(false);
 
@@ -117,29 +122,63 @@ const ModalBody = (props) => {
         </div>
     )
 }
-const ModalFooter = ({handleCloseModal}) => {
+const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs}) => {
+    const handleConfirmOnClick = async (evt) => {
+        if(!addedDirs.includes(path)) {
+            // add it to the database and close modal
+            const url = "/api/settings/library/addDirectory";
+            const body = "newDir="+path;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: body
+            });
+            const data = await res.json();
+            if(data.success) {
+                // update addeddirs
+                setAddedDirs((addedDirs) => {
+                    const copy = addedDirs.slice();
+                    copy.push(path);
+                    return copy;
+                });
+                handleCloseModal();
+            }else {
+                //TODO styling error
+                alert('ERROR');
+            }
+        }else {
+            //TODO styling alert
+            alert('Already Exists');
+        }
+    }
+
+
     return(
         <div className="modal-footer">
             <button onClick={handleCloseModal}>
                 Cancel
             </button>
-            <button>
+            <button onClick={handleConfirmOnClick}>
                 Confirm
             </button>
         </div>
     )
 }
 
-const SelectDirModal = ({show, handleCloseModal}) => {
+const SelectDirModal = ({show, handleCloseModal, addedDirs, setAddedDirs}) => {
+    const [path, setPath] = useState('');
+
     if(show) {
         return(
             <div id="selectDirModal" className="select-dir-modal" onClick={handleCloseModal}>
                 <div className='modal-content' onClick={evt => {evt.stopPropagation()}}>
                     <ModalHeader />
                     <br />
-                    <ModalBody />
+                    <ModalBody path={path} setPath={setPath} />
                     <br />
-                    <ModalFooter handleCloseModal={handleCloseModal} /> 
+                    <ModalFooter path={path} handleCloseModal={handleCloseModal} addedDirs={addedDirs} setAddedDirs={setAddedDirs} /> 
                 </div>
             </div>
         )
@@ -151,13 +190,33 @@ const SelectDirModal = ({show, handleCloseModal}) => {
 // library setting
 const Library = () => {
     const [show, setShow] = useState(false);
-    // TODO get added dirs from database
+    const [addedDirs, setAddedDirs] = useState([]);
+    // get added dirs from database
+    const getAddedDirectory = async () => {
+        const url = "/api/settings/library/getAddedDirectory";
+        const res = await fetch(url);
+        const data = await res.json();
+        if(data.dirs) {
+            setAddedDirs(data.dirs);
+        }else {
+            // TODO style alert
+            alert('ERROR');
+        }
+    }
+
+    // get added dirs from database and display
+    useEffect(() => {
+        getAddedDirectory();
+    }, []);
+
     return(
         <div className="library">
             <h1>Library</h1>
-            <AddedDirs /> 
+            <AddedDirs addedDirs={addedDirs} setAddedDirs={setAddedDirs} /> 
             <AddDirsBtn handleOnClick={evt => {setShow(true)}}/>
             <SelectDirModal 
+                addedDirs={addedDirs}
+                setAddedDirs={setAddedDirs}
                 show={show} 
                 handleCloseModal={evt => {setShow(false)}}
             />
