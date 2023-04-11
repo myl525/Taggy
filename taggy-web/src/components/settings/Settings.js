@@ -2,21 +2,46 @@ import React, { useState, useEffect } from 'react';
 import './style.scss';
 
 // added directories, directories that are added to the library 
-const AddedDir = ({path}) => {
+const AddedDir = ({path, handleDeleteOnClick}) => {
     return(
         <div className="added-dir">
             <span>{path}</span>
             <div className="options">
-                <button className="option">Edit</button>
-                <button className="option">Delete</button>
+                <button onClick={handleDeleteOnClick.bind(null, path)} className="option">Delete</button>
             </div>
         </div>
     )
 }
 const AddedDirs = ({addedDirs, setAddedDirs}) => {
+    const handleDeleteOnClick = async (path) => {
+        const url = '/api/settings/library/deleteDirectory';
+        const body = `dir=${path}`
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: body
+        });
+        const data = await res.json();
+        if(data.success) {
+            setAddedDirs((addedDirs) => {
+                const copy = addedDirs;
+                const filtered = copy.filter((ele) => {
+                    return ele !== path;
+                });
+                return filtered;
+            })
+        } else {
+            // TODO styling
+            alert('ERROR');
+        }
+    }
+
+
     const listOfAddedDirs = addedDirs.map((addedDir) => {
         return(
-            <AddedDir key={addedDir} path={addedDir} />
+            <AddedDir key={addedDir} path={addedDir} handleDeleteOnClick={handleDeleteOnClick} />
         )
     })
 

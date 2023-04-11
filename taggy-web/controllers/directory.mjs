@@ -17,17 +17,6 @@ const db = new sqlite.Database(dbPath, sqlite.OPEN_READWRITE, (err) => {
 // set up router
 const router = express.Router();
 
-
-// check if directory exists
-// router.get('/api/settings/library/existsDir', async (req, res) => {
-//     const dir = req.query.path;
-//     try {
-//         res.json({exist: fs.existsSync(dir)});
-//     } catch (error) {
-//         console.log(error);
-//     }
-// } )
-
 // get child directory
 router.get('/api/settings/library/getChildDirectory', async (req, res) => {
     const parent = req.query.path;
@@ -45,7 +34,7 @@ router.get('/api/settings/library/getChildDirectory', async (req, res) => {
 });
 
 // get added directory
-router.get('/api/settings/library/getAddedDirectory', async (req, res) => {
+router.get('/api/settings/library/getAddedDirectory', (req, res) => {
     const selectSql = "SELECT * FROM libraries";
     db.all(selectSql, (err, rows) => {
         if(err) {
@@ -60,7 +49,7 @@ router.get('/api/settings/library/getAddedDirectory', async (req, res) => {
     })
 })
 // add selected directory to the libraries table
-router.post('/api/settings/library/addDirectory', async (req, res) => {
+router.post('/api/settings/library/addDirectory', (req, res) => {
     const newDir = req.body.newDir;
     try {
         if(fs.existsSync(newDir)) {
@@ -71,12 +60,22 @@ router.post('/api/settings/library/addDirectory', async (req, res) => {
             res.json({success: false});
         }
     } catch (error) {
-        res.json({error: error});
+        res.json({error});
     }    
+})
+// delete selected directory from libraries
+router.post('/api/settings/library/deleteDirectory', async (req, res) => {
+    const dir = req.body.dir;
+    try{
+        const deleteSql = "DELETE FROM libraries WHERE path=?";
+        db.run(deleteSql, dir);
+        res.json({success: true});
+    }catch (error) { 
+        res.json({error});
+    }
 })
 
 // scan selected directory and files
-
 
 
 export default router;
