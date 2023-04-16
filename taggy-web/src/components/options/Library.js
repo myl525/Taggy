@@ -216,6 +216,7 @@ const SelectDirModal = ({show, handleCloseModal, addedDirs, setAddedDirs}) => {
 const Library = () => {
     const [show, setShow] = useState(false);
     const [addedDirs, setAddedDirs] = useState([]);
+    
     // get added dirs from database
     const getAddedDirectory = async () => {
         const url = "/api/settings/library/getAddedDirectory";
@@ -239,23 +240,16 @@ const Library = () => {
             <h1>Library</h1>
             <AddedDirs addedDirs={addedDirs} setAddedDirs={setAddedDirs} /> 
             <AddDirsBtn handleOnClick={evt => {setShow(true)}}/>
-            <SelectDirModal 
-                addedDirs={addedDirs}
-                setAddedDirs={setAddedDirs}
-                show={show} 
-                handleCloseModal={evt => {setShow(false)}}
-            />
+            {show &&
+                <SelectDirModal 
+                    addedDirs={addedDirs}
+                    setAddedDirs={setAddedDirs}
+                    show={show} 
+                    handleCloseModal={evt => {setShow(false)}}
+                />
+            }   
         </div>
     )
 }
 
-// settings
-const Settings = () => {
-    return(
-        <div className="settings">
-            <Library />
-        </div>
-    )
-}
-
-export default Settings;
+export default Library;

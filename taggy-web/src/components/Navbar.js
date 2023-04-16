@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Folder } from 'react-bootstrap-icons';
+import { Search, Folder, ArrowClockwise } from 'react-bootstrap-icons';
 import './style.scss';
 
 // sections, link to video / image / music pages
@@ -44,19 +44,22 @@ const SearchBar = () => {
     )
 }
 
-// options, link to stats / settings
+// options, link to library / scan
 const Options = (props) => {
     return(
         <div className="navbar-options">
-            <Link id="dirsBtn" className="navbar-options-btn" to="/settings">
+            <Link id="dirsBtn" className="navbar-options-btn" to="/library">
                 <Folder />
+            </Link>
+            <Link id="scanBtn" className='navbar-options-btn' to="/scan">
+                <ArrowClockwise />
             </Link>
         </div>
     )
 }
 
 const Navbar = (props) => {
-    const sections = [{link: '/video', sectionName: 'video'}];
+    const sections = [{link: '/videos', sectionName: 'videos'}];
 
     return(
         <nav className="navbar">
