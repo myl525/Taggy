@@ -45,31 +45,66 @@ function getDataFromLibraries() {
     })
 }
 
-async function scanDir(dir) { 
-    // check whether this dir exists in TABLE dirs
-    const selectSqlCondition = 'SELECT id, path, mod_time FROM dirs WHERE path = ?';
-    db.get(selectSqlCondition, [dir], async (err, row) => {
-        if(row) {
-            // this directory is already in the dirs, update mod time if needed
-            const stats = fs.statSync(row.path);
-            const newMtime = stats.mtime.toISOString();
-            if(newMtime !== row['mod_time']) {
-                // update mod_time
-                // TODO why need to update mod time??
-                const updateSql = 'UPDATE dirs SET mod_time = ? WHERE id = ?';
-                db.run(updateSql, [newMtime, row.id]);
+function selectDir(dir) {
+    return new Promise((resolve, reject) => {
+        const selectSqlCondition = 'SELECT id, path, mod_time FROM dirs WHERE path = ?';
+        db.get(selectSqlCondition, [dir], async (err, row) => {
+            if(err) {
+                reject(err);
+            }else {
+                resolve(row);
             }
-        }else {
-            // this directory is a new entry, add it to the dirs
-            const insertSql = 'INSERT INTO dirs(path, parent_dir_id, mod_time) VALUES(?, ?, ?)'
-            const stats = fs.statSync(dir);
-            const parentDirPath = path.dirname(dir);
-            const temp = await getDirId(parentDirPath);
-            const parentDirId = temp ? temp : null;
-            const modTime = stats.mtime.toISOString();
-            db.run(insertSql, [dir, parentDirId, modTime]);
-        }
+        });
     });
+}
+function updateDir(row) {
+    return new Promise((resolve, reject) => {
+        // this directory is already in the dirs, update mod time if needed
+        const stats = fs.statSync(row.path);
+        const newMtime = stats.mtime.toISOString();
+        if(newMtime !== row['mod_time']) {
+            // update mod_time
+            // TODO why need to update mod time??
+            const updateSql = 'UPDATE dirs SET mod_time = ? WHERE id = ?';
+            db.run(updateSql, [newMtime, row.id], (err) => {
+                if(err) {
+                    reject(err);
+                }else {
+                    resolve();
+                }
+            });
+        }
+    })
+}
+function insertDir(dir) {
+    return new Promise(async (resolve, reject) => {
+        const insertSql = 'INSERT INTO dirs(path, parent_dir_id, mod_time) VALUES(?, ?, ?)'
+        const stats = fs.statSync(dir);
+        const parentDirPath = path.dirname(dir);
+        const temp = await getDirId(parentDirPath);
+        const parentDirId = temp ? temp : null;
+        const modTime = stats.mtime.toISOString();
+        db.run(insertSql, [dir, parentDirId, modTime], (err) => {
+            if(err) {
+                reject(err);
+            }else {
+                resolve();
+            }
+        });
+    })
+}
+
+async function insertOrUpdateDir(dir) {
+    const row = await selectDir(dir);
+    if(row) {
+        await updateDir(row);
+    }else{
+        await insertDir(dir);
+    }
+}
+
+async function scanDir(dir) { 
+    await insertOrUpdateDir(dir);
 
     // scan files in this directory
     const children = await readdir(dir, {withFileTypes: true});
@@ -88,7 +123,6 @@ async function scanDir(dir) {
             }
         })
     )
-    
 }
 
 // scan file
@@ -173,7 +207,7 @@ function getDirId(dir) {
             if(err) {
                 reject(err);
             }else {
-                resolve(row.id);
+                resolve(row ? row.id : undefined);
             }
         })
     })
