@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import VideoPlayer from "./VideoPlayer";
+import { Link } from "react-router-dom";
 
 const VideoCard = ({ id, basename }) => {
     return(
@@ -14,7 +13,8 @@ const Videos = () => {
     const [videos, setVideos] = useState([]);
 
     async function getVideos() {
-        const url = '/api/videos/getVideos';
+        const query = window.location.search;
+        const url = '/api/videos/getVideos' + query;
         const res = await fetch(url);
         const data = await res.json();
         if(data.error) {
@@ -29,7 +29,7 @@ const Videos = () => {
         // FIXME useEffect is called twice
         getVideos();
     }, [])
-
+    
     const listOfVideos = videos.map((video) => {
         return(
             <VideoCard key={video.id} id={video.id} basename={video.basename} />
