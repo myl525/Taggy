@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import fs from 'fs';
 import path from 'path';
+import ffmpeg from 'fluent-ffmpeg';
 import sqlite3 from "sqlite3";
 
 // set up sqlite
@@ -20,9 +21,9 @@ const router = express.Router();
 router.get('/api/settings/scan', async (req, res) => {
     try {
         console.log('scanning...');
-        const libraries = await getDataFromLibraries();
+        const libraries = await getDirsFromLibraries();
         await Promise.all(libraries.map(async (record) => {
-            await scanDir(record.path);
+            return scanDir(record.path);
         }))
         console.log('finish scanning...');
         res.json({success: true});
@@ -32,7 +33,7 @@ router.get('/api/settings/scan', async (req, res) => {
 });
 
 /** functions */
-function getDataFromLibraries() {
+function getDirsFromLibraries() {
     return new Promise((resolve, reject) => {
         const selectSql = 'SELECT path FROM libraries';
         db.all(selectSql, (err, rows) => {
@@ -45,10 +46,10 @@ function getDataFromLibraries() {
     })
 }
 
-function selectDir(dir) {
+function selectDir(dirPath) {
     return new Promise((resolve, reject) => {
         const selectSqlCondition = 'SELECT id, path, mod_time FROM dirs WHERE path = ?';
-        db.get(selectSqlCondition, [dir], async (err, row) => {
+        db.get(selectSqlCondition, [dirPath], async (err, row) => {
             if(err) {
                 reject(err);
             }else {
@@ -73,18 +74,24 @@ function updateDir(row) {
                     resolve();
                 }
             });
+        }else {
+            resolve();
         }
     })
 }
-function insertDir(dir) {
+function insertDir(dirPath) {
     return new Promise(async (resolve, reject) => {
+        // this dir does not exist in the database, add it.
         const insertSql = 'INSERT INTO dirs(path, parent_dir_id, mod_time) VALUES(?, ?, ?)'
-        const stats = fs.statSync(dir);
-        const parentDirPath = path.dirname(dir);
-        const temp = await getDirId(parentDirPath);
+        const stats = fs.statSync(dirPath);
+        const parentDirPath = path.dirname(dirPath);
+        let temp;
+        if(parentDirPath && parentDirPath !== '.') {
+            temp = await getDirId(parentDirPath);
+        }
         const parentDirId = temp ? temp : null;
         const modTime = stats.mtime.toISOString();
-        db.run(insertSql, [dir, parentDirId, modTime], (err) => {
+        db.run(insertSql, [dirPath, parentDirId, modTime], (err) => {
             if(err) {
                 reject(err);
             }else {
@@ -94,45 +101,44 @@ function insertDir(dir) {
     })
 }
 
-async function insertOrUpdateDir(dir) {
-    const row = await selectDir(dir);
+async function insertOrUpdateDir(dirPath) {
+    const row = await selectDir(dirPath);
     if(row) {
         await updateDir(row);
     }else{
-        await insertDir(dir);
+        await insertDir(dirPath);
     }
 }
 
-async function scanDir(dir) { 
-    await insertOrUpdateDir(dir);
-
+async function scanDir(dirPath) {
+    await insertOrUpdateDir(dirPath);
     // scan files in this directory
-    const children = await readdir(dir, {withFileTypes: true});
+    const children = await readdir(dirPath, {withFileTypes: true});
     const exts = ['.mp4', '.avi', '.mov'];
     await Promise.all(
         children.map(async (child) => {
             if(child.isDirectory()) { 
                 // if child is directory
-                const childDir = path.resolve(dir, child.name); // generate full path
-                await scanDir(childDir);
+                const childDirPath = path.resolve(dirPath, child.name); // generate full path
+                await scanDir(childDirPath);
             }else { // if child is video file, add to the database
                 //TODO support more format
                 if(exts.includes(path.extname(child.name))) {
-                    await scanFile(child.name, dir); 
+                    await scanFile(child.name, dirPath);
                 }
             }
         })
-    )
+    );
 }
 
 // scan file
-async function scanFile(file, dir) {
+async function scanFile(fileName, dirPath) {
     // get parent dir id
-    const dirId = await getDirId(dir);
+    const dirId = await getDirId(dirPath);
     // quering file by its full path
-    const fileRecord = await getFileRecord(file, dirId);
+    const fileRecord = await getFileRecord(fileName, dirId);
     // generate file's full path
-    const fileFullPath = path.resolve(dir, file)
+    const fileFullPath = path.resolve(dirPath, fileName)
     // generate file's fingerprint
     const fingerprint = await generateFingerprint(fileFullPath);
     // get file's stats
@@ -142,7 +148,7 @@ async function scanFile(file, dir) {
         // file exists in the database
         // comparing mod time with existing record, if not the same, then recalculate file fingerprint and update
         const fileRecordModTime = fileRecord['mod_time'];
-        if( fileRecordModTime !== modTime ) {
+        if(fileRecordModTime !== modTime) {
             // mod time are not same
             // update record in TABLE files , mod_time, size
             const updateFileRecordSql = 'UPDATE files SET mod_time = ?, size = ? WHERE id = ?';
@@ -150,60 +156,63 @@ async function scanFile(file, dir) {
             // update TABLE files_fingerprints
             const updateFileFingerprintSql = 'UPDATE files_fingerprints SET fingerprint = ? WHERE id = ?';
             db.run(updateFileFingerprintSql, [fingerprint, fileRecord.id]);
-            //TODO update TABLE video_files
+            // update TABLE video_files
+            await createOrUpdateVideoFilesRecord(fileFullPath, fileRecord.id, 'update');
         }
     }else { // file not exist in database (by full path)
         // query by fingerprints to see whether this file exists in database (from TABLE files)
         const fpFileRecords = await getFilesByFingerPrint(fingerprint);
         if(fpFileRecords) {
             // records exist (same fingerprint), check whether these files are missing in the file system
-            const fpFileObjs = fpFileRecords.map((fpFileRecord) => {
-                const obj = {};
-                obj.id = fpFileRecord.id;
-                obj.path = generateFileFullPath(fpFileRecord.basename, fpFileRecord['parent_dir_id']);
-                return obj;
+            const missingFiles= fpFileRecords.filter((fpFileRecord) => {
+                return !fs.existsSync(fpFileRecord.path);
             });
-            const missingFileObjs = fpFileObjs.filter((fpFileObj) => {
-                return !fs.existsSync(fpFileObj.path);
-            });
-            if(missingFileObjs.length === 1) {
+            if(missingFiles.length === 1) {
+                const missingFile = missingFiles[0];
                 // only one file is missing in the file system, consider this file as the renamed file of the missing one
                 // update its path (basename, parent_dir_id)
                 const updateMissingFileSql = 'UPDATE files SET basename = ?, parent_dir_id = ? WHERE id = ?';
-                db.run(updateMissingFileSql, [file, dirId, missingFileObjs[0].id]);
+                db.run(updateMissingFileSql, [fileName, dirId, missingFile.id]);
+                // update video file record
+                await createOrUpdateVideoFilesRecord(fileFullPath, missingFile.id, 'update');
             }else {
                 // TODO delete all missing records?
                 // none missing or too many missing, treat this file as a new file
                 // create new record in TABLE files, files_fingerprints
-                createNewFileRecords(file, dirId, size, modTime, 'md5', fingerprint);
-                // TODO create record for video_files
+                const newFileRecordId = await createNewFileRecords(fileName, dirId, size, modTime, 'md5', fingerprint);
+                // create record for video_files
+                await createOrUpdateVideoFilesRecord(fileFullPath, newFileRecordId, 'insert');
             }
         }else {
             // file not exist, new file
             // create record for TABLE files
-            createNewFileRecords(file, dirId, size, modTime, 'md5', fingerprint);
-            //TODO create record for video_files
+            await createNewFileRecords(fileName, dirId, size, modTime, 'md5', fingerprint);
+            // create record for video_files
+            //await createOrUpdateVideoFilesRecord(file, id, 'insert');
         }
     }
 }
 
 // create new file records in TABLE files, files_fingerprints
 function createNewFileRecords(basename, parentDirId, size, modTime, type, fingerprint) {
-    const insertNewFileSql = 'INSERT INTO files(basename, parent_dir_id, size, mod_time) VALUES(?, ?, ?, ?)';
-    db.run(insertNewFileSql, [basename, parentDirId, size, modTime], function (err) {
-        if(err) {
-            console.log(err);
-        }else {
-            const insertSql = 'INSERT INTO files_fingerprints(file_id, type, fingerprint) VALUES(?, ?, ?)';
-            db.run(insertSql, [this.lastID, type, fingerprint]);
-        }
+    return new Promise((resolve, reject) => {
+        const insertNewFileSql = 'INSERT INTO files(basename, parent_dir_id, size, mod_time) VALUES(?, ?, ?, ?)';
+        db.run(insertNewFileSql, [basename, parentDirId, size, modTime], function (err) {
+            if(err) {
+                reject(err);
+            }else {
+                const insertSql = 'INSERT INTO files_fingerprints(file_id, type, fingerprint) VALUES(?, ?, ?)';
+                db.run(insertSql, [this.lastID, type, fingerprint]);
+                resolve(this.lastID);
+            }
+        });  
     });
 }
 // get directory id from TABLE dirs
-function getDirId(dir) {
+function getDirId(dirPath) {
     return new Promise((resolve, reject) => {
         const selectDirIdSql = 'SELECT id FROM dirs WHERE path = ?';
-        db.get(selectDirIdSql, [dir], (err, row) => {
+        db.get(selectDirIdSql, [dirPath], (err, row) => {
             if(err) {
                 reject(err);
             }else {
@@ -230,14 +239,21 @@ function getFileRecord(file, dirId) {
 // get files from TABLE files and files_fingerprints by fingerprint
 function getFilesByFingerPrint(fingerprint) {
     return new Promise(async (resolve, reject) => {
-        const selectByFpSql = `SELECT id, basename, parent_dir_id FROM files 
+        const selectByFpSql = `SELECT files.id, basename, path FROM files 
                         INNER JOIN files_fingerprints on files.id = files_fingerprints.file_id 
+                        INNER JOIN dirs on dirs.id = files.parent_dir_id
                         WHERE files_fingerprints.fingerprint = ?`;
         db.all(selectByFpSql, [fingerprint], (err, rows) => {
             if(err) {
                 reject(err);
             }else {
-                resolve(rows);
+                const ret = rows.map((row) => {
+                    const obj = {};
+                    obj.id = row.id;
+                    obj.path = path.resolve(row.path, row.basename);
+                    return obj;
+                })
+                resolve(ret);
             }
         })
     })
@@ -269,9 +285,57 @@ async function generateFingerprint(path, algo='md5') {
     return result;
 }
 
-//TODO create video file stats
 function generateVideoFileStats(file) {
+    return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(file, (err, metadata) => {
+            if(err) {
+                reject(err);
+            }else {
+                const rawData = metadata.streams[0];
+                const totalSeconds = rawData.duration;
+                const totalMinutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const minutes = totalMinutes % 60;
+                const hours = Math.floor(totalMinutes / 60);
+               
+                const duration = `${hours>0?hours+':':''}${minutes>0?minutes:'0'}:${seconds.toFixed(0)}`;
+                const width = rawData.width;
+                const height = rawData.height;
+                const rawFps = rawData.r_frame_rate.split('/');
+                const fps = (Number(rawFps[0]) / Number(rawFps[1])).toFixed(2);
+                resolve({duration, width, height, fps});
+            }
+        })
+    })
+}
 
+function createOrUpdateVideoFilesRecord(filePath, fileId, operation) {
+    return new Promise(async (resolve, reject) => {
+        const stats = await generateVideoFileStats(filePath);
+        const format = path.extname(filePath).split('.')[1];
+        
+        if(operation === 'insert') {
+            const insertSql = `INSERT INTO video_files(file_id, duration, format, width, height, fps) VALUES(?, ?, ?, ?, ?, ?)`;
+            const paras = [fileId, stats.duration, format, stats.width, stats.height, stats.fps];
+            db.run(insertSql, paras, (err) => {
+                if(err) {
+                    reject(err);
+                }else {
+                    resolve();
+                }
+            });
+        }else if(operation === 'update') {
+            const updateSql = `UPDATE video_files SET duration = ?, format = ?, width = ?, height = ?, fps = ? WHERE file_id = ?`;
+            const paras = [stats.duration, format, stats.width, stats.height, stats.fps, fileId];
+            db.run(updateSql, paras, (err) => {
+                if(err) {
+                    reject(err);
+                }else {
+                    resolve();
+                }
+            });
+        }
+    })
 }
 
 export default router;
