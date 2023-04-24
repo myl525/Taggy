@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import './style.scss';
+import { Folder2, XCircle, XOctagonFill } from 'react-bootstrap-icons';
 
 // added directories, directories that are added to the library 
 const AddedDir = ({path, handleDeleteOnClick}) => {
     return(
         <div className="added-dir">
             <span>{path}</span>
-            <div className="options">
-                <button onClick={handleDeleteOnClick.bind(null, path)} className="option">Delete</button>
-            </div>
+            <span onClick={handleDeleteOnClick.bind(null, path)} className="option">
+                Delete
+            </span>
         </div>
     )
 }
 const AddedDirs = ({addedDirs, setAddedDirs}) => {
-    const handleDeleteOnClick = async (path) => {
+    async function handleDeleteOnClick(path) {
         const url = '/api/settings/library/deleteDirectory';
         const body = `dir=${path}`
         const res = await fetch(url, {
@@ -33,11 +34,9 @@ const AddedDirs = ({addedDirs, setAddedDirs}) => {
                 return filtered;
             })
         } else {
-            // TODO styling
-            alert('ERROR');
+            alert(`ERROR: ${res.status} \n ${data.error}`);
         }
     }
-
 
     const listOfAddedDirs = addedDirs.map((addedDir) => {
         return(
@@ -47,6 +46,9 @@ const AddedDirs = ({addedDirs, setAddedDirs}) => {
 
     return(
         <div className="added-dirs">
+            <div className='-header'>
+                <div>Path</div>
+            </div>
             {listOfAddedDirs}
         </div>
     )
@@ -69,12 +71,12 @@ const ModalHeader = () => {
         </div>
     )
 }
-const ModalBody = ({path, setPath}) => {
+const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
     const [dirs, setDirs] = useState([]);
     const [error, setError] = useState(false);
 
     // get parent directory
-    const getParentDirectory = async (path) => {
+    async function getParentDirectory(path) {
         
         const pathArr = path.split('/');
         const parentPath = pathArr.slice(0, pathArr.length-1).join('/') || '/';
@@ -85,7 +87,7 @@ const ModalBody = ({path, setPath}) => {
         setDirs(data.children);
     }
     // get child directory for specific path
-    const getChildDirectory = async (path) => {
+    async function getChildDirectory(path) {
         const res = await fetch('/api/settings/library/getChildDirectory?path=' + path);
         const data = await res.json();
         
@@ -103,7 +105,7 @@ const ModalBody = ({path, setPath}) => {
         }
     }
     // handle input change
-    const handlePathOnChange = async (evt) => {
+    async function handlePathOnChange(evt) {
         const newPath = evt.target.value;
         // update path
         setPath(newPath);
@@ -113,25 +115,32 @@ const ModalBody = ({path, setPath}) => {
         }else {
             setDirs([]);
         }
+
+        // clear error
+        if(duplicate) {
+            setDuplicate(false);
+        }
     } 
     // handle click directory
-    const handleDirOnClick = async (evt) => {
+    async function handleDirOnClick(evt) {
         const dir = evt.target.textContent;
         await getChildDirectory(dir);
         setPath(dir);
     }
     // handle click up button
-    const handleUpOnClick = async (evt) => {
+    async function handleUpOnClick(evt) {
         await getParentDirectory(path);
         const pathArr = path.split('/');
         const parentPath = pathArr.slice(0, pathArr.length-1).join('/') || '/';
         setPath(parentPath);
+        setDuplicate(false);
     }
 
     // create a list of dirs
     const listOfDirs = dirs.map((dir) => {
         return(
             <li key={dir} className="directory" onClick={handleDirOnClick}>
+                <Folder2 />
                 {dir}
             </li>
         )
@@ -139,7 +148,20 @@ const ModalBody = ({path, setPath}) => {
 
     return(
         <div className="modal-body">
-            <input type="text" placeholder='path' onChange={handlePathOnChange} value={path} />
+            <div>
+               <input 
+                    className={duplicate ? 'error-input' : ''} 
+                    type="text" 
+                    placeholder='file path' 
+                    onChange={handlePathOnChange} 
+                    value={path} 
+                /> 
+                <span className={duplicate?"input-error-msg":"element-hidden"}>
+                    <XOctagonFill />
+                    Error: This directory already exists!
+                </span>
+            </div>
+            
             <ul className='dir-list'>
                 {!path || path.endsWith('/') ? '' : <button id='parentDirBtn' onClick={handleUpOnClick}>UP</button>}
                 {error ? <h1>No such file or directory</h1> : listOfDirs}
@@ -147,7 +169,7 @@ const ModalBody = ({path, setPath}) => {
         </div>
     )
 }
-const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs}) => {
+const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs, setDuplicate}) => {
     const handleConfirmOnClick = async (evt) => {
         if(!addedDirs.includes(path)) {
             // add it to the database and close modal
@@ -170,22 +192,19 @@ const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs}) => {
                 });
                 handleCloseModal();
             }else {
-                //TODO styling error
-                alert('ERROR');
+                alert(`ERROR: ${res.status} \n ${data.error}`);
             }
         }else {
-            //TODO styling alert
-            alert('Already Exists');
+            setDuplicate(true);
         }
     }
 
-
     return(
         <div className="modal-footer">
-            <button onClick={handleCloseModal}>
+            <button className="cancel-button" onClick={handleCloseModal}>
                 Cancel
             </button>
-            <button onClick={handleConfirmOnClick}>
+            <button className="confirm-button" onClick={handleConfirmOnClick}>
                 Confirm
             </button>
         </div>
@@ -194,16 +213,28 @@ const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs}) => {
 
 const SelectDirModal = ({show, handleCloseModal, addedDirs, setAddedDirs}) => {
     const [path, setPath] = useState('');
+    const [duplicate, setDuplicate] = useState(false);
 
     if(show) {
         return(
             <div id="selectDirModal" className="select-dir-modal" onClick={handleCloseModal}>
                 <div className='modal-content' onClick={evt => {evt.stopPropagation()}}>
                     <ModalHeader />
-                    <br />
-                    <ModalBody path={path} setPath={setPath} />
-                    <br />
-                    <ModalFooter path={path} handleCloseModal={handleCloseModal} addedDirs={addedDirs} setAddedDirs={setAddedDirs} /> 
+                    <hr></hr>
+                    <ModalBody 
+                        path={path} 
+                        setPath={setPath}
+                        duplicate={duplicate}
+                        setDuplicate={setDuplicate}
+                    />
+                    <hr></hr>
+                    <ModalFooter 
+                        path={path} 
+                        handleCloseModal={handleCloseModal} 
+                        addedDirs={addedDirs} 
+                        setAddedDirs={setAddedDirs} 
+                        setDuplicate={setDuplicate}
+                    /> 
                 </div>
             </div>
         )
@@ -217,27 +248,26 @@ const Library = () => {
     const [show, setShow] = useState(false);
     const [addedDirs, setAddedDirs] = useState([]);
     
+    // get added dirs from database and display
+    useEffect(() => {
+        getAddedDirectory();
+    }, []);
+
     // get added dirs from database
-    const getAddedDirectory = async () => {
+    async function getAddedDirectory() {
         const url = "/api/settings/library/getAddedDirectory";
         const res = await fetch(url);
         const data = await res.json();
         if(data.dirs) {
             setAddedDirs(data.dirs);
         }else {
-            // TODO style alert
-            alert('ERROR');
+            alert(`ERROR: ${res.status} \n ${data.error}`);
         }
     }
 
-    // get added dirs from database and display
-    useEffect(() => {
-        getAddedDirectory();
-    }, []);
-
     return(
         <div className="library">
-            <h1>Library</h1>
+            <h1 className="header">Library</h1>
             <AddedDirs addedDirs={addedDirs} setAddedDirs={setAddedDirs} /> 
             <AddDirsBtn handleOnClick={evt => {setShow(true)}}/>
             {show &&
