@@ -19,7 +19,9 @@ const Scan = ({addedDirs}) => {
     }
 
     return(
-        <button onClick={handleScanOnClick}>{status}</button>
+        <div className="scan">
+            <button onClick={handleScanOnClick}>{status}</button>
+        </div>
     )
 }
 

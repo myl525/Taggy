@@ -14,7 +14,7 @@ $err-red: #ff0033;
     align-items: flex-start;
     flex-direction: column;
     gap: 1rem;
-    margin: 3rem auto;
+    margin: 5rem auto;
     padding: 1.5rem 3rem;
     width: 60%;
 
@@ -101,7 +101,7 @@ $err-red: #ff0033;
     width: 40% !important;
     height: fit-content !important;
     max-height: 600px;
-    margin-top: 3rem;
+    margin-top: 5rem !important;
     //padding: 0.5rem;
     border-radius: 4px;
 }
@@ -220,4 +220,8 @@ $err-red: #ff0033;
     .confirm-button {
         background-color: green;
     }
+}
+
+.scan {
+    margin-top: 5rem;
 }

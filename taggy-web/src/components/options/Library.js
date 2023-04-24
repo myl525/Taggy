@@ -104,23 +104,30 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
             setDirs(data.children);
         }
     }
+    const debounceGetChildDirectory = debounce(getChildDirectory);
+
     // handle input change
     async function handlePathOnChange(evt) {
         const newPath = evt.target.value;
         // update path
         setPath(newPath);
         
-        if(newPath) {
-            await debounce(getChildDirectory, 300)(newPath); 
-        }else {
-            setDirs([]);
-        }
+        // if(newPath) {
+        //     await debounceGetChildDirectory(newPath); 
+        // }else {
+        //     setDirs([]);
+        // }
 
         // clear error
         if(duplicate) {
             setDuplicate(false);
         }
     } 
+    
+    async function handleOnKeyUp(evt) {
+        const newPath = evt.target.value;
+        await debounceGetChildDirectory(newPath);
+    }
 
     // handle click directory
     async function handleDirOnClick(evt) {
@@ -169,6 +176,7 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
                     type="text" 
                     placeholder='file path' 
                     onChange={handlePathOnChange} 
+                    onKeyUp={handleOnKeyUp}
                     value={path} 
                 /> 
                 <span className={duplicate?"input-error-msg":"element-hidden"}>
