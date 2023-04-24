@@ -14,45 +14,95 @@ const db = new sqlite.Database(dbPath, sqlite.OPEN_READWRITE, (err) => {
 // set up router
 const router = express.Router();
 
-router.get('/api/videos/getVideos', (req, res) => {
-    //TODO add tags filter (tags filter is array)
-    const tagsFilter = req.query.tags ? JSON.parse(req.query.tags):undefined;
+/**Videos Index Page */
+// routes
+router.get('/api/videos/getVideos', async (req, res) => {
+    const tagsFilter = req.query.tags ? JSON.parse(req.query.tags) : undefined;
+    const nameStr = req.query.name;
+    let selectSql = `SELECT DISTINCT files.id FROM files`;
+    const paras = [];
     if(tagsFilter) {
-        const selectSql = `SELECT DISTINCT files.id, basename FROM files 
-                                    INNER JOIN videos_tags ON files.id = videos_tags.video_id
-                                    INNER JOIN tags ON videos_tags.tag_id = tags.id
-                                    WHERE tags.name IN (${tagsFilter.map(() => '?').join(",")})`;
-        db.all(selectSql, tagsFilter, (err, rows) => {
+        selectSql += ` INNER JOIN videos_tags ON files.id = videos_tags.video_id
+                    INNER JOIN tags ON videos_tags.tag_id = tags.id
+                    WHERE tags.name IN (${tagsFilter.map(() => '?').join(",")})`;
+        paras.push(...tagsFilter);
+    }
+    if(nameStr) {
+        const word = tagsFilter ? 'AND' : 'WHERE'
+        selectSql += ` ${word} files.basename LIKE ?`;
+        paras.push(`%${nameStr}%`);
+    }
+    db.all(selectSql, paras, async (err, rows) => {
+        if(err) {
+            console.log(err);
+            res.json({error: err});
+        }else {
+            const videoIds = rows.map((row) => row.id);
+            const videos = await getVideosById(videoIds);
+            res.json({videos});
+        }
+    })
+    
+})
+// function
+function getVideosById(ids) {
+    return new Promise((resolve, reject) => {
+        const selectSql = `SELECT id, basename, duration, width, height FROM files 
+                            INNER JOIN video_files ON id = file_id 
+                            WHERE id IN (${ids.map(() => '?').join(",")})`;
+        db.all(selectSql, ids, async (err, rows) => {
             if(err) {
-                console.log(err);
-                res.json({error: err});
+                reject(err);
             }else {
-                const videos = rows.map((row) => {
-                    const [id, basename] = [row.id, row.basename];
-                    //const filePath = generateFileFullPath(basename, parentDirId);
-                    return {id, basename};
-                })
-                res.json({videos});
-            }
-        });
-    }else {
-        const selectSql = 'SELECT id, basename FROM files';
-        db.all(selectSql, (err, rows) => {
-            if(err) {
-                console.log(err);
-                res.json({error: err});
-            }else {
-                const videos = rows.map((row) => {
-                    const [id, basename] = [row.id, row.basename];
-                    //const filePath = generateFileFullPath(basename, parentDirId);
-                    return {id, basename};
-                })
-                res.json({videos});
+                const videos = await Promise.all(rows.map(async (row) => {
+                    const {id, basename, duration, width, height} = row;
+                    //const size = (row.size / (1024*1024)).toFixed(2);
+                    const resolution = calculateResolution(height, width);
+                    const numTags = await getNumberOfTags(id);
+                    return {id, basename, duration, resolution, numTags};
+                }));
+                resolve(videos);
             }
         })
-    }
-})
+    })
+}
 
+function calculateResolution(height, width) {
+    const value = Math.min(Number(height), Number(width));
+    if(value < 360) {
+        return '240P';
+    }else if(value < 480) {
+        return '360P';
+    }else if(value < 720) {
+        return '480P';
+    }else if(value < 1080) {
+        return '720P';
+    }else if(value < 1440) {
+        return '1080P';
+    }else if(value < 2160){
+        return '2K';
+    }else {
+        return '4K';
+    }
+}
+
+function getNumberOfTags(videoId) {
+    return new Promise((resolve, reject) => {
+        const selectSql = `SELECT COUNT(*) AS numTags FROM videos_tags WHERE video_id = ? GROUP BY video_id`;
+        db.get(selectSql, [String(videoId)], (err, row) => {
+            if(err) {
+                reject(err);
+            }else if(row){
+                resolve(row.numTags);
+            }else {
+                resolve(0);
+            }
+        })
+    })
+}
+
+/**Videos Video Player page */
+// routes
 router.get('/api/videos/getVideo', async (req, res) => {
     const videoId = req.query.id;
     const video = await getVideoById(videoId);
@@ -86,10 +136,27 @@ router.get('/api/videos/videoStream', async (req, res) => {
 })
 
 router.get('/api/videos/getVideoTags', async (req, res) => {
-    const tags = await getVideoTags(req.query.id);
-    res.json({tags});
+    const videoId = req.query.id;
+    const selectSql = `SELECT name FROM tags 
+                            INNER JOIN videos_tags 
+                            ON tags.id = videos_tags.tag_id
+                            WHERE videos_tags.video_id = ?`;
+    db.all(selectSql, [videoId], (err, rows) => {
+        if(err) {
+            console.log(err);
+            res.json({error: err});
+        }else {
+            if(rows) {
+                const tags = rows.map((row) => {
+                    return row.name;
+                });
+                res.json({tags});
+            }else {
+                res.json({tags: []});
+            }
+        }
+    })
 })
-
 
 // add tags for video
 router.post('/api/videos/addTags', async (req, res) => {
@@ -97,8 +164,7 @@ router.post('/api/videos/addTags', async (req, res) => {
     // then get tag id and insert into TABLE videos_tags
     const tags = JSON.parse(req.body.tags);
     const videoId = req.body.id;
-    
-    tags.map((tag) => {
+    await Promise.all(tags.map((tag) => {
         // check if tag exists, if not, create new tag
        insertTag(tag)
             .then((tag) => {
@@ -109,9 +175,28 @@ router.post('/api/videos/addTags', async (req, res) => {
             })
             .catch(err => {
                 console.log(err);
+                res.json({error: err});
             });
-    });
+    }));
+    res.json({success: true});
 })
+
+// delete tags for video
+router.post('/api/videos/deleteTag', async (req, res) => {
+    const videoId = req.body.videoId;
+    const tagName = req.body.tag;
+    const deleteSql = `DELETE FROM videos_tags WHERE video_id = ? AND tag_id = 
+                            (SELECT id FROM tags WHERE name = ?)`;
+    db.run(deleteSql, [videoId, tagName], (err) => {
+        if(err) {
+            console.log(err);
+            res.json({error: err});
+        }else {
+            res.json({success: true});
+        }
+    })
+})
+
 
 //handle search videos by tag (support multiple tags filter)
 // router.get('/api/videos/searchByTags', (req, res) => {
@@ -133,31 +218,32 @@ function generateFileFullPath(basename, parentDirId) {
     })
 }
 
-function getVideoTags(videoId) {
-    return new Promise((resolve, reject) => {
-        const selectSql = `SELECT name FROM tags 
-                            INNER JOIN videos_tags 
-                            ON tags.id = videos_tags.tag_id
-                            WHERE videos_tags.video_id = ?`;
-        db.all(selectSql, [videoId], (err, rows) => {
-            if(err) {
-                reject(err);
-            }else {
-                if(rows) {
-                    const tags = rows.map((row) => {
-                        return row.name;
-                    });
-                    resolve(tags);
-                }else {
-                    resolve([]);
-                }
-            }
-        })
-    })
-}
+// function getVideoTags(videoId) {
+//     return new Promise((resolve, reject) => {
+//         const selectSql = `SELECT name FROM tags 
+//                             INNER JOIN videos_tags 
+//                             ON tags.id = videos_tags.tag_id
+//                             WHERE videos_tags.video_id = ?`;
+//         db.all(selectSql, [videoId], (err, rows) => {
+//             if(err) {
+//                 reject(err);
+//             }else {
+//                 if(rows) {
+//                     const tags = rows.map((row) => {
+//                         return row.name;
+//                     });
+//                     resolve(tags);
+//                 }else {
+//                     resolve([]);
+//                 }
+//             }
+//         })
+//     })
+// }
 
 function getVideoById(id) {
-    //TODO send info(basename, filepath?, size, resolution), tags
+    // send info(basename, filepath?, size, 
+    // TODO resolution), tags
     return new Promise((resolve, reject) => {
         const selectSql = 'SELECT * FROM files WHERE id = ?';
         db.get(selectSql, [id], async (err, row) => {
@@ -167,13 +253,18 @@ function getVideoById(id) {
                 const [basename, parentDirId] = [row.basename, row['parent_dir_id']];
                 const filePath = await generateFileFullPath(basename, parentDirId);
                 const size = (row.size / (1024*1024)).toFixed(2);
-                const tags = await getVideoTags(id);
-                const video = {basename, filePath, size, tags};
+                //const tags = await getVideoTags(id);
+                const video = {basename, filePath, size};
                 resolve(video);
             }
         })
     })
 }
+
+
+
+
+
 // insert tag into TABLE tags
 function insertTag(tag) {
     return new Promise((resolve, reject) => {
