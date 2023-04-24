@@ -111,7 +111,7 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
         setPath(newPath);
         
         if(newPath) {
-            await getChildDirectory(newPath); 
+            await debounce(getChildDirectory, 300)(newPath); 
         }else {
             setDirs([]);
         }
@@ -121,6 +121,7 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
             setDuplicate(false);
         }
     } 
+
     // handle click directory
     async function handleDirOnClick(evt) {
         const dir = evt.target.textContent;
@@ -135,6 +136,20 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
         setPath(parentPath);
         setDuplicate(false);
     }
+    // debounce
+    function debounce (func, wait=300) {
+        let timeout;
+      
+        return function executedFunction(...args) {
+          const later = () => {
+            //clearTimeout(timeout);
+            func(...args);
+          };
+      
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+    };
 
     // create a list of dirs
     const listOfDirs = dirs.map((dir) => {
@@ -170,8 +185,10 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
     )
 }
 const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs, setDuplicate}) => {
+    // all added dirs path to lower case, to prevent duplicate paths
+    const transfromed = addedDirs.map((ele) => ele.toLowerCase());
     const handleConfirmOnClick = async (evt) => {
-        if(!addedDirs.includes(path)) {
+        if(!transfromed.includes(path.toLowerCase())) {
             // add it to the database and close modal
             const url = "/api/settings/library/addDirectory";
             const body = "newDir="+path;
@@ -214,6 +231,10 @@ const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs, setDuplic
 const SelectDirModal = ({show, handleCloseModal, addedDirs, setAddedDirs}) => {
     const [path, setPath] = useState('');
     const [duplicate, setDuplicate] = useState(false);
+
+    if(show) {
+        document.body.style.overflow = 'hidden';
+    }
 
     if(show) {
         return(
@@ -264,6 +285,10 @@ const Library = () => {
             alert(`ERROR: ${res.status} \n ${data.error}`);
         }
     }
+    function handleCloseModal() {
+        setShow(false);
+        document.body.style.overflow = '';
+    }
 
     return(
         <div className="library">
@@ -275,7 +300,7 @@ const Library = () => {
                     addedDirs={addedDirs}
                     setAddedDirs={setAddedDirs}
                     show={show} 
-                    handleCloseModal={evt => {setShow(false)}}
+                    handleCloseModal={handleCloseModal}
                 />
             }   
         </div>
