@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './style.scss';
-import { Folder2, XCircle, XOctagonFill } from 'react-bootstrap-icons';
+import { Folder2, XOctagonFill, X } from 'react-bootstrap-icons';
 
 // added directories, directories that are added to the library 
 const AddedDir = ({path, handleDeleteOnClick}) => {
@@ -34,7 +34,7 @@ const AddedDirs = ({addedDirs, setAddedDirs}) => {
                 return filtered;
             })
         } else {
-            alert(`ERROR: ${res.status} \n ${data.error}`);
+            alert(`ERROR: ${res.status} \n ${data.error.code}`);
         }
     }
 
@@ -157,6 +157,11 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
           timeout = setTimeout(later, wait);
         };
     };
+    function handleClearInputBtnOnClick() {
+        setPath('');
+        setDuplicate(false);
+    }
+
 
     // create a list of dirs
     const listOfDirs = dirs.map((dir) => {
@@ -170,21 +175,21 @@ const ModalBody = ({path, setPath, duplicate, setDuplicate}) => {
 
     return(
         <div className="modal-body">
-            <div>
+            <div className={duplicate?"error-input":"input-bar"}>
                <input 
-                    className={duplicate ? 'error-input' : ''} 
+                    autoFocus
                     type="text" 
                     placeholder='file path' 
                     onChange={handlePathOnChange} 
                     onKeyUp={handleOnKeyUp}
                     value={path} 
                 /> 
-                <span className={duplicate?"input-error-msg":"element-hidden"}>
-                    <XOctagonFill />
-                    Error: This directory already exists!
-                </span>
+                <X className='clear-input-btn' onClick={handleClearInputBtnOnClick}/>
             </div>
-            
+            <span className={duplicate?"input-error-msg":"element-hidden"}>
+                <XOctagonFill />
+                Error: This directory already exists!
+            </span>
             <ul className='dir-list'>
                 {!path || path.endsWith('/') ? '' : <button id='parentDirBtn' onClick={handleUpOnClick}>UP</button>}
                 {error ? <h1>No such file or directory</h1> : listOfDirs}
@@ -217,7 +222,7 @@ const ModalFooter = ({handleCloseModal, path, addedDirs, setAddedDirs, setDuplic
                 });
                 handleCloseModal();
             }else {
-                alert(`ERROR: ${res.status} \n ${data.error}`);
+                alert(`ERROR: ${res.status} \n ${data.error.code}`);
             }
         }else {
             setDuplicate(true);
