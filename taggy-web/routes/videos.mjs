@@ -43,7 +43,7 @@ router.get('/api/videos/getVideos', async (req, res) => {
         }
     })
     
-})
+});
 // function
 function getVideosById(ids) {
     return new Promise((resolve, reject) => {
@@ -197,26 +197,20 @@ router.post('/api/videos/deleteTag', async (req, res) => {
     })
 })
 
-
-//handle search videos by tag (support multiple tags filter)
-// router.get('/api/videos/searchByTags', (req, res) => {
-//     const tags = JSON.parse(req.query.tags);
-// })
-
 /** Functions */
 // generate full path of a file
-function generateFileFullPath(basename, parentDirId) {
-    return new Promise((resolve, reject) => {
-        const selectSql = 'SELECT path FROM dirs WHERE id = ?';
-        db.get(selectSql, [parentDirId], (err, row) => {
-            if(err) {
-                reject(err);
-            }else {
-                resolve(path.resolve(row.path, basename));
-            }
-        }) 
-    })
-}
+// function generateFileFullPath(basename, parentDirId) {
+//     return new Promise((resolve, reject) => {
+//         const selectSql = 'SELECT path FROM dirs WHERE id = ?';
+//         db.get(selectSql, [parentDirId], (err, row) => {
+//             if(err) {
+//                 reject(err);
+//             }else {
+//                 resolve(path.resolve(row.path, basename));
+//             }
+//         }) 
+//     })
+// }
 
 // function getVideoTags(videoId) {
 //     return new Promise((resolve, reject) => {
@@ -245,25 +239,23 @@ function getVideoById(id) {
     // send info(basename, filepath?, size, 
     // TODO resolution), tags
     return new Promise((resolve, reject) => {
-        const selectSql = 'SELECT * FROM files WHERE id = ?';
+        const selectSql = `SELECT basename, size, fps, width, height, path FROM files 
+                            INNER JOIN video_files ON files.id = video_files.file_id 
+                            INNER JOIN dirs ON dirs.id = files.parent_dir_id
+                            WHERE files.id = ?`;
         db.get(selectSql, [id], async (err, row) => {
             if(err) {
                 reject(err);
             }else {
-                const [basename, parentDirId] = [row.basename, row['parent_dir_id']];
-                const filePath = await generateFileFullPath(basename, parentDirId);
+                const {basename, fps, width, height} = row;
+                const filePath = path.resolve(row.path, basename);
                 const size = (row.size / (1024*1024)).toFixed(2);
-                //const tags = await getVideoTags(id);
-                const video = {basename, filePath, size};
+                const video = {basename, filePath, size, fps, width, height};
                 resolve(video);
             }
-        })
+        });
     })
 }
-
-
-
-
 
 // insert tag into TABLE tags
 function insertTag(tag) {
@@ -294,7 +286,7 @@ function getTagId(tag) {
 // create video-tag pair in TABLE videos_tags
 function insertVideoTag(videoId, tagId) {
     return new Promise((resolve, reject) => {
-        const insertSql = 'INSERT INTO videos_tags(video_id, tag_id) VALUES(?, ?)';
+        const insertSql = 'INSERT OR IGNORE INTO videos_tags(video_id, tag_id) VALUES(?, ?)';
         db.run(insertSql, [videoId, tagId], (err) => {
             if(err) {
                 reject(err);
