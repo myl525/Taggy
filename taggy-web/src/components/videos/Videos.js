@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Tag } from "react-bootstrap-icons";
+import { X, Tag, PlayCircle } from "react-bootstrap-icons";
 import { Link } from "react-router-dom";
 
 
@@ -80,6 +80,11 @@ const VideoCard = ({ video}) => {
     const [player, setPlayer] = useState(false);
     const timer = useRef(null);
 
+
+    function handleCoverOnClick() {
+        window.location.href = `/videos/${video.id}`;
+    }
+
     function handleMouseOver() {
         timer.current = setTimeout(() => setPlayer(true), 300);
         //setPlayer(true);
@@ -92,9 +97,10 @@ const VideoCard = ({ video}) => {
 
     return(
         <div className="video-card">
-            <div className="video-card-cover" onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave}>
+            <div className="video-card-cover" onClick={handleCoverOnClick} onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave}>
                 {!player&&
                     <>
+                        <PlayCircle className="play-icon" />
                         <div className="num-tags">
                             <Tag />
                             <span>{numTags}</span>
