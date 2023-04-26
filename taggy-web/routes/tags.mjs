@@ -14,7 +14,8 @@ const db = new sqlite.Database(dbPath, sqlite.OPEN_READWRITE, (err) => {
 // set up router
 const router = express.Router();
 
-/** APIS */
+/** tags index page */
+// APIS
 router.get('/api/tags/getTag', (req, res) => {
     const tagId = req.query.id;
     const selectSql = 'SELECT name FROM tags WHERE id = ?';
@@ -29,22 +30,46 @@ router.get('/api/tags/getTag', (req, res) => {
 })
 
 router.get('/api/tags/getTags', (req, res) => {
-    const selectSql = 'SELECT id, name FROM tags';
-        db.all(selectSql, (err, rows) => {
+    let tagName = req.query.name;
+    let selectSql = 'SELECT id, name FROM tags';
+    if(tagName) {
+        selectSql += ' WHERE name LIKE ?';
+        tagName = `%${tagName}%`
+    }
+    // console.log(selectSql)
+    // console.log(tagName)
+    db.all(selectSql, [tagName], async (err, rows) => {
+        if(err) {
+            console.log(err);
+            res.json({error: err});
+        }else {
+            const tags = await Promise.all(rows.map(async (row) => {
+                const [id, name] = [row.id, row.name];
+                const numVideos = await getNumberOfVideos(row.id);
+                //const filePath = generateFileFullPath(basename, parentDirId);
+                return {id, name, numVideos};
+            }))
+            //console.log(tags);
+            res.json({tags});
+        }
+    })
+})
+// Functions
+function getNumberOfVideos(tagId) {
+    return new Promise((resolve, reject) => {
+        const selectSql = `SELECT COUNT(*) AS numVideos FROM videos_tags WHERE tag_id = ? GROUP BY tag_id`;
+        db.get(selectSql, [tagId], (err, row) => {
             if(err) {
-                console.log(err);
-                res.json({error: err});
+                reject(err);
             }else {
-                const tags = rows.map((row) => {
-                    const [id, name] = [row.id, row.name];
-                    //const filePath = generateFileFullPath(basename, parentDirId);
-                    return {id, name};
-                })
-                res.json({tags});
+                resolve(row.numVideos);
             }
         })
-})
+    })
+}
 
+
+/**Tag detail page */
 router.get('/api/tags/getTagVideos', (req, res) => {
     const tagId = req.query.tag;
     const selectSql = `SELECT DISTINCT id, basename FROM files 
