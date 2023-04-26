@@ -1,0 +1,120 @@
+$pink: #FB7299;
+$bg-gray: #F6F7F8;
+$font-black: #18191C;
+$font-gray: #9499A0;
+$tag-gray:  #F1F2F3;
+$tag-font-gray: #61666D;
+$tag-font-blue: #00AEEC;
+$delete-red: #ff0033;
+.tags {
+    margin-top: 5rem;
+
+    .tool-bar {
+        width: 20%;
+        margin: 1rem auto;
+    
+        .search-bar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0.5rem;
+            font-size: 1.2rem;
+            background-color: $bg-gray;
+            border-radius: 6px;
+            border: lightgray solid 0.5px;
+            opacity: 0.7;
+            transition: all 0.3s;
+            &:focus-within {
+                background-color: white;
+                outline: none;
+                transition: all 0.3s;
+                border: solid $pink 0.5px;
+            }
+
+            &:hover {
+                opacity: 1;
+                transition: all 0.3s;
+            }
+        
+            input {
+                font-size: inherit;
+                background-color: transparent;
+                width: 90%;
+                padding: 0.3rem;
+                outline: none;
+                border: none;
+            }
+        }
+    }
+}
+
+.tag-cards {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 250px);
+    justify-content: space-around;
+    grid-gap: 1rem;
+}
+
+.tag-card {
+    a {
+        color: black;
+        text-decoration: none;
+    }
+    .tag-card-cover {
+        position: relative;
+        display: flex;
+        color: white;
+        align-items: flex-end;
+        justify-content: space-between;
+        background-color: lightgray;
+        border-radius: 6px;
+        width: 250px;
+        aspect-ratio: 16 / 9;
+        font-size: 0.9rem;
+
+        .tag-icon {
+            position: absolute; 
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 54px;
+        }
+
+        .num-videos {
+            margin: 0 0 0.5rem 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        &:hover {
+            cursor: pointer;
+        }
+    }
+
+    .tag-card-name {
+        width: 250px;
+        height: 40px;
+        margin-top: 1rem;
+        text-align: left;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: all 0.35s;
+
+        a {
+            transition: color 0.35s;
+            &:hover {
+                cursor: pointer;
+                color:$tag-font-blue;
+                transition: all 0.35s;
+            }  
+        }
+        
+    }
+    
+}
