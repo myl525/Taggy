@@ -247,9 +247,11 @@ function getVideoById(id) {
             if(err) {
                 reject(err);
             }else {
-                const {basename, fps, width, height} = row;
-                const filePath = path.resolve(row.path, basename);
+                const {width, height} = row;
+                const basename = path.parse(row.basename).name;
+                const filePath = path.resolve(row.path, row.basename);
                 const size = (row.size / (1024*1024)).toFixed(2);
+                const fps = Number(row.fps).toFixed(0);
                 const video = {basename, filePath, size, fps, width, height};
                 resolve(video);
             }
