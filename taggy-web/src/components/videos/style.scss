@@ -61,6 +61,7 @@ video {
 }
 
 .video-cards {
+    margin-top: 2rem;
     display: grid;
     grid-template-columns: repeat(auto-fill, 250px);
     justify-content: space-around;
@@ -130,7 +131,8 @@ video {
         transition: all 0.35s;
 
         a {
-          &:hover {
+            transition: all 0.35s;
+            &:hover {
                 cursor: pointer;
                 color:#FB7299;
                 transition: all 0.35s;
@@ -143,14 +145,16 @@ video {
 /* video player page */
 .video-player {
     margin-top: 5rem;
-    padding: 0 5rem;
+    padding: 0 3rem;
+    display: flex;
+    gap: 2rem;
 }
 
 // main component
 .video-player-main {
     //border: solid black;
-    width: 70%;
-    min-width: 750px;
+    width: 65%;
+    min-width: 680px;
     // display: flex;
     // flex-direction: column;
     // align-items: flex-start;
@@ -158,11 +162,45 @@ video {
 
 // title, stats
 .video-top-info {
+    width: 100%;
     .video-top-title {
         color: $font-black;
         font-size: 24px;
         margin: 0 0 0.5rem 0;
         text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .video-top-title-container {
+        max-width: 100%;
+        width: fit-content;
+        position: relative;
+        .tooltip {
+            display: block;
+            opacity: 0;
+            visibility: hidden;
+            text-align: left;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 12px;
+            z-index: 10;
+            max-width: 300px;
+            //min-width: 100px;
+            width: max-content;
+            background-color: $tag-gray;
+            display: block;
+            position: absolute;
+            top: 90%;
+            left: 100%;
+            white-space: wrap;
+        }
+
+        &:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transition: all 3s;
+        }
     }
 
     .video-top-stats {
@@ -260,6 +298,7 @@ video {
 }
 
 .add-tag-modal {
+    z-index: 100;
     position: fixed;
     left: 0;
     top: 0;
@@ -392,4 +431,45 @@ video {
 }
 
 
+.video-player-side {
+    height: 90vh;
+    // border: solid black;
+    overflow-y: scroll;
+    width: 340px;
+}
 
+.video-player-side-playlist {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+
+    align-items: center;
+    gap: 1rem;
+    .video-card {
+        width: 100%;
+        display: flex;
+        gap: 0.3rem;
+
+        .video-card-cover {
+            min-width: 150px;
+            font-size: 10px;
+            .play-icon {
+                font-size: 28px;
+            }
+
+            .num-tags {
+                margin: 0 0 4px 4px;
+            }
+            .resolution-duration {
+                margin: 0 4px 4px 0;
+            }
+        }
+
+        .video-card-title {
+            max-width: 200px;
+            margin: 0;
+            font-size: 1rem;
+        }
+    }
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import VideoPlayerTags from "./VideoPlayerTags";
+import VideoPlayerSide from "./VideoPlayerSide";
 import './style.scss'
 
 const VideoInfo = ({video}) => {
@@ -8,11 +9,16 @@ const VideoInfo = ({video}) => {
         <div className="video-top-info">
             {video.basename &&
                 <>
-                <h1 className="video-top-title">{video.basename.split('.')[0]}</h1>
+                <div className="video-top-title-container">
+                    <h1 className="video-top-title">
+                        {video.basename}
+                    </h1>
+                    <span className="tooltip">{video.basename}</span>
+                </div>
                 <div className="video-top-stats">
                     <span>{'Size: '+video.size + 'MB'}</span>
                     <span>{`Res: ${video.width}*${video.height}`}</span>
-                    <span>{'FPS: '+Number(video.fps).toFixed(0)}</span>
+                    <span>{'FPS: '+video.fps}</span>
                 </div>
                 </>
             }         
@@ -56,9 +62,7 @@ const VideoPlayer = () => {
                 <Video videoId={videoId} />  
                 <VideoPlayerTags videoId={videoId}/>
             </main>
-            <aside>
-
-            </aside>
+            <VideoPlayerSide videoId={videoId} />
         </div>
     )
 }

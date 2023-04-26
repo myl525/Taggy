@@ -37,7 +37,7 @@ const SearchBar = ({setVideos}) => {
         window.history.replaceState({}, "", url);
         getVideos(url.searchParams);
     }
-    const debounceUpdateURL = debounce(updateURL);
+    //const debounceUpdateURL = debounce(updateURL);
 
     function deleteURL(key) {
         const url = new URL(window.location);
@@ -45,7 +45,7 @@ const SearchBar = ({setVideos}) => {
         window.history.replaceState({}, "", url);
         getVideos(url.searchParams);
     }
-    const debounceDeleteURL = debounce(deleteURL);
+    //const debounceDeleteURL = debounce(deleteURL);
     
     function handleOnChange(evt) {
         // update input
@@ -56,11 +56,13 @@ const SearchBar = ({setVideos}) => {
     function handleOnKeyUp(evt) {
         const value = evt.target.value;
         if(value) {
-            debounceUpdateURL("name", value);
+            updateURL("name", value);
         }else {
-            debounceDeleteURL("name");
+            deleteURL("name");
         }
     }
+
+    const debouncedHandleOnKeyUp = debounce(handleOnKeyUp);
 
     function handleXOnClick() {
         setVal('');
@@ -69,13 +71,13 @@ const SearchBar = ({setVideos}) => {
 
     return (
         <div className="search-bar">
-            <input type="text" value={val} onChange={handleOnChange} onKeyUp={handleOnKeyUp} />
+            <input type="text" value={val} onChange={handleOnChange} onKeyUp={debouncedHandleOnKeyUp} />
             <X onClick={handleXOnClick} className={val?"input-clear-button":"element-hidden"} />
         </div>
     )
 }
 
-const VideoCard = ({ video}) => {
+const VideoCard = ({video}) => {
     const {id, basename, duration, resolution, numTags} = video;
     const [player, setPlayer] = useState(false);
     const timer = useRef(null);
