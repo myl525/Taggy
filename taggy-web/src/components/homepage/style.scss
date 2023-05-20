@@ -1,0 +1,30 @@
+.home-page {
+    margin: 5rem auto;
+    padding: 0 3rem;
+    
+}
+
+.recent-videos-header {
+    h2 {
+        margin: 0;
+        text-transform: uppercase;
+    }
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    p {
+        text-transform: capitalize;
+        &:hover {
+            color: #00AEEC;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        transition: all 0.3s;
+    }
+}
+
+.recent-videos-video-cards {
+    display: flex;
+    justify-content: space-between;
+}

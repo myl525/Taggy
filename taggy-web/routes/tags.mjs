@@ -72,19 +72,23 @@ function getNumberOfVideos(tagId) {
 /**Tag detail page */
 router.get('/api/tags/getTagVideos', (req, res) => {
     const tagId = req.query.tag;
-    const selectSql = `SELECT DISTINCT id, basename FROM files 
+    const selectSql = `SELECT DISTINCT id, basename, duration, width, height FROM files 
                         INNER JOIN videos_tags ON files.id = videos_tags.video_id
+                        INNER JOIN video_files ON files.id = video_files.file_id
                         WHERE videos_tags.tag_id = ? `
-        db.all(selectSql, [Number(tagId)], (err, rows) => {
+        db.all(selectSql, [Number(tagId)], async (err, rows) => {
             if(err) {
                 console.log(err);
                 res.json({error: err});
             }else {
-                const videos = rows.map((row) => {
-                    const [id, basename] = [row.id, row.basename];
-                    //const filePath = generateFileFullPath(basename, parentDirId);
-                    return {id, basename};
-                });
+                const videos = await Promise.all(rows.map(async (row) => {
+                    //console.log(row);
+                    const {id, basename, duration, width, height} = row;
+                    const resolution = calculateResolution(height, width);
+                    const numTags = await getNumberOfTags(id);
+                    return {id, basename, duration, resolution, numTags};
+                }));
+                //console.log(videos);
                 res.json({videos});
             }
         });
@@ -142,7 +146,39 @@ function deleteTagInVideosTags(tagId) {
         });
     })
 }
+function calculateResolution(height, width) {
+    const value = Math.min(Number(height), Number(width));
+    if(value < 360) {
+        return '240P';
+    }else if(value < 480) {
+        return '360P';
+    }else if(value < 720) {
+        return '480P';
+    }else if(value < 1080) {
+        return '720P';
+    }else if(value < 1440) {
+        return '1080P';
+    }else if(value < 2160){
+        return '2K';
+    }else {
+        return '4K';
+    }
+}
 
+function getNumberOfTags(videoId) {
+    return new Promise((resolve, reject) => {
+        const selectSql = `SELECT COUNT(*) AS numTags FROM videos_tags WHERE video_id = ? GROUP BY video_id`;
+        db.get(selectSql, [String(videoId)], (err, row) => {
+            if(err) {
+                reject(err);
+            }else if(row){
+                resolve(row.numTags);
+            }else {
+                resolve(0);
+            }
+        })
+    })
+}
 
 
 

@@ -13,6 +13,15 @@ const db = new sqlite.Database(dbPath, sqlite.OPEN_READWRITE, (err) => {
 })
 // set up router
 const router = express.Router();
+/**Home page */
+router.get('/api/videos/getRecentVideos', async (req, res) => {
+    try {
+        const videos = await getRecentVideos();
+        res.json({videos});
+    } catch (error) {
+        res.json({error: error});
+    }
+});
 
 /**Videos Index Page */
 // routes
@@ -64,7 +73,30 @@ function getVideosById(ids) {
                 resolve(videos);
             }
         })
-    })
+    });
+}
+
+function getRecentVideos() {
+    return new Promise((resolve, reject) => {
+        const selectSql = `SELECT id, basename, duration, width, height FROM files 
+                            INNER JOIN video_files ON id = file_id 
+                            ORDER BY created_at
+                            LIMIT 5`;
+        db.all(selectSql, async (err, rows) => {
+            if(err) {
+                reject(err);
+            }else {
+                const videos = await Promise.all(rows.map(async (row) => {
+                    const {id, basename, duration, width, height} = row;
+                    //const size = (row.size / (1024*1024)).toFixed(2);
+                    const resolution = calculateResolution(height, width);
+                    const numTags = await getNumberOfTags(id);
+                    return {id, basename, duration, resolution, numTags};
+                }));
+                resolve(videos);
+            }
+        })
+    });
 }
 
 function calculateResolution(height, width) {

@@ -1,57 +1,16 @@
-import React, {useState} from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Folder, ArrowClockwise } from 'react-bootstrap-icons';
+import { Folder, ArrowClockwise, PlayCircle, Tags } from 'react-bootstrap-icons';
 import './style.scss';
-
-// sections, link to video / image / music pages
-const Section = (props) => {
-    return(
-        <Link className="navbar-section" to={props.link}>{props.sectionName}</Link>
-    )
-}
-const Sections = (props) => {
-    const listOfSections = props.sections.map((section) => {
-        return(
-            <Section key={section.sectionName} link={section.link} sectionName={section.sectionName} />
-        )
-    });
-
-    return(
-        <div className="navbar-sections">
-            {listOfSections}
-        </div>
-    )
-}
-
-// search bar
-const SearchBar = () => {
-    const [val, setVal] = useState('');
-    const handleChange = (evt) => {
-        setVal(evt.target.value);
-    }
-
-    return(
-        <div className="navbar-searchBar">
-            <Search className="navbar-searchBar-icon" />
-            <input 
-                id="searchInput" 
-                className="navbar-searchBar-input" 
-                type="text" 
-                value={val} 
-                onChange={handleChange}
-            />
-        </div>
-    )
-}
 
 // options, link to library / scan
 const Options = (props) => {
     return(
         <div className="navbar-options">
-            <Link id="dirsBtn" className="navbar-options-btn" to="/library">
+            <Link id="dirsBtn" to="/library">
                 <Folder />
             </Link>
-            <Link id="scanBtn" className='navbar-options-btn' to="/scan">
+            <Link id="scanBtn" to="/scan">
                 <ArrowClockwise />
             </Link>
         </div>
@@ -59,13 +18,24 @@ const Options = (props) => {
 }
 
 const Navbar = (props) => {
-    const sections = [{link: '/videos', sectionName: 'videos'}];
-
     return(
         <nav className="navbar">
-            <Sections sections={sections} />
-            <SearchBar />
-            <Options />
+            <div className="left">
+                <a href='/' className='home-button'>Taggy</a>
+                <div className="navbar-sections">
+                    <a href="/videos">
+                        <PlayCircle />
+                        videos
+                    </a>
+                    <a href="/tags">
+                        <Tags />
+                        tags
+                    </a>
+                </div> 
+            </div>
+            <div className='right'>
+              <Options />  
+            </div>
         </nav>
     )
 }

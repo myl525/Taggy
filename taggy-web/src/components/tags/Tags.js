@@ -110,7 +110,6 @@ const Tags = () => {
             //TODO styling error
             alert('ERROR');
         }else {
-            console.log(data.tags)
             setTags(data.tags);
         }
     }

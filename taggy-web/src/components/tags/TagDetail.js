@@ -1,11 +1,49 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
+import { PlayCircle, Tag, X } from "react-bootstrap-icons";
+import './style.scss';
 
-const VideoCard = ({ id, basename }) => {
+const VideoCard = ({video}) => {
+    const {id, basename, duration, resolution, numTags} = video;
+    const [player, setPlayer] = useState(false);
+    const timer = useRef(null);
+
+    function handleCoverOnClick() {
+        window.location.href = `/videos/${video.id}`;
+    }
+
+    function handleMouseOver() {
+        timer.current = setTimeout(() => setPlayer(true), 300);
+    }
+    function handleMouseLeave() {
+        clearTimeout(timer.current);
+        setPlayer(false);
+    }
+
     return(
         <div className="video-card">
-            <Link to={`/videos/${id}`}>{basename}</Link>
+            <div className="video-card-cover" onClick={handleCoverOnClick} onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave}>
+                {!player&&
+                    <>
+                        <PlayCircle className="play-icon" />
+                        <div className="num-tags">
+                            <Tag />
+                            <span>{numTags}</span>
+                        </div>
+                        <div className="resolution-duration">
+                            <span className="resolution">{resolution} </span>
+                            <span className="video-duration">{duration}</span> 
+                        </div>
+                    </>
+                }
+                {player &&
+                    <video className="inline-player" src={`/api/videos/videoStream?id=${video.id}`} autoPlay muted></video>
+                }
+            </div>
+            <div className="video-card-title">
+               <a href={`/videos/${id}`}>{basename}</a> 
+            </div>
         </div>
     )
 }
@@ -19,7 +57,7 @@ const TagVideos = ( {tagId} ) => {
 
     const listOfVideos = videos.map((video) => {
         return(
-            <VideoCard key={video.id} id={video.id} basename={video.basename}/>
+            <VideoCard key={video.id} video={video}/>
         );
     })
 
@@ -30,12 +68,13 @@ const TagVideos = ( {tagId} ) => {
         if(data.error) {
             alert('ERROR');
         }else {
+            console.log(data.videos);
             setVideos(data.videos);
         }
     }
 
     return(
-        <div>
+        <div className="tag-videos">
             {listOfVideos}
         </div>
     )
@@ -69,16 +108,25 @@ const TagEditPanel = ( {tagId, setPanel, setTagName} ) => {
         }
     }
 
+    function handleXOnClick() {
+        setVal('');
+    }
+
     return(
         <div className="tag-edit-panel">
-            <input type="text" value={val} onChange={handleOnChange} />
-            <button onClick={() => {setPanel('options')}}>Cancel</button>
-            <button onClick={handleConfirmOnClick}>Confirm</button>
+            <div className="edit-bar">
+                <input className="edit-input" type="text" value={val} onChange={handleOnChange} />
+                <X onClick={handleXOnClick} className={val?"input-clear-button":"element-hidden"} />
+            </div>
+            <div className="cancel-confirm">
+                <button className="cancel-btn" onClick={() => {setPanel('options')}}>Cancel</button>
+                <button className="confirm-btn" onClick={handleConfirmOnClick}>Confirm</button>
+            </div>
         </div>
     )
 }
 
-const TagDeletePanel = ( {tagId} ) => {
+const TagDeletePanel = ( {tagId, setPanel} ) => {
     async function handleConfirmOnClick() {
         const url = '/api/tags/deleteTag';
         const body = `tagId=${tagId}`;
@@ -99,7 +147,10 @@ const TagDeletePanel = ( {tagId} ) => {
     }
     
     return(
-        <button onClick={handleConfirmOnClick}>Confirm</button>
+        <div className="cancel-confirm">
+            <button className="cancel-btn" onClick={() => {setPanel('options')}}>Cancel</button>
+            <button className="confirm-btn" onClick={handleConfirmOnClick}>Confirm</button>
+        </div>
     )
 }
 
@@ -125,19 +176,23 @@ const TagInfo = ( {tagId} ) => {
 
     return(
         <div className="tag-info">
-            {tagName}
+            <div className="tag-info-name">
+                <Tag />
+                <span>{tagName}</span>
+            </div>
+            
             <div className="options">
                 {panel === 'options' &&
                     <>
-                    <button onClick={() => setPanel('edit')}>Edit</button>
-                    <button onClick={() => setPanel('delete')} >Delete</button>
+                    <button className="edit-btn" onClick={() => setPanel('edit')}>Edit</button>
+                    <button className="delete-btn" onClick={() => setPanel('delete')} >Delete</button>
                     </>
                 }
                 {panel === 'edit' &&
                     <TagEditPanel  tagId={tagId} setPanel={setPanel} setTagName={setTagName} />
                 }
                 {panel === 'delete' &&
-                    <TagDeletePanel tagId={tagId} />
+                    <TagDeletePanel tagId={tagId} setPanel={setPanel} />
                 }
             </div>
             
@@ -150,8 +205,13 @@ const TagDetail = () => {
 
     return(
         <div className="tag-detail">
-            <TagInfo tagId={tagId} />
-            <TagVideos tagId={tagId} />
+            <main className="tag-detail-main">
+                <TagVideos tagId={tagId} />
+            </main>
+            <aside className="tag-detail-side">
+                <TagInfo tagId={tagId} />
+            </aside>
+            
         </div>
     )
 }

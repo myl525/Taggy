@@ -82,7 +82,7 @@ function updateDir(row) {
 function insertDir(dirPath) {
     return new Promise(async (resolve, reject) => {
         // this dir does not exist in the database, add it.
-        const insertSql = 'INSERT INTO dirs(path, parent_dir_id, mod_time) VALUES(?, ?, ?)'
+        const insertSql = 'INSERT INTO dirs(path, parent_dir_id, mod_time, created_at) VALUES(?, ?, ?, ?)';
         const stats = fs.statSync(dirPath);
         const parentDirPath = path.dirname(dirPath);
         let temp;
@@ -91,7 +91,8 @@ function insertDir(dirPath) {
         }
         const parentDirId = temp ? temp : null;
         const modTime = stats.mtime.toISOString();
-        db.run(insertSql, [dirPath, parentDirId, modTime], (err) => {
+        const ct = new Date();
+        db.run(insertSql, [dirPath, parentDirId, modTime, ct.toISOString()], (err) => {
             if(err) {
                 reject(err);
             }else {
@@ -196,8 +197,9 @@ async function scanFile(fileName, dirPath) {
 // create new file records in TABLE files, files_fingerprints
 function createNewFileRecords(basename, parentDirId, size, modTime, type, fingerprint) {
     return new Promise((resolve, reject) => {
-        const insertNewFileSql = 'INSERT INTO files(basename, parent_dir_id, size, mod_time) VALUES(?, ?, ?, ?)';
-        db.run(insertNewFileSql, [basename, parentDirId, size, modTime], function (err) {
+        const insertNewFileSql = 'INSERT INTO files(basename, parent_dir_id, size, mod_time, created_at) VALUES(?, ?, ?, ?, ?)';
+        const ct = new Date();
+        db.run(insertNewFileSql, [basename, parentDirId, size, modTime, ct.toISOString()], function (err) {
             if(err) {
                 reject(err);
             }else {
@@ -298,7 +300,7 @@ function generateVideoFileStats(file) {
                 const minutes = totalMinutes % 60;
                 const hours = Math.floor(totalMinutes / 60);
                
-                const duration = `${hours>0?hours+':':''}${minutes>0?minutes:'0'}:${seconds.toFixed(0)}`;
+                const duration = `${hours>0?hours+':':''}${minutes>0?minutes:'0'}:${seconds>10?seconds.toFixed(0):`0${seconds.toFixed(0)}`}`;
                 const width = rawData.width;
                 const height = rawData.height;
                 const rawFps = rawData.r_frame_rate.split('/');

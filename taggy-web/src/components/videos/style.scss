@@ -66,6 +66,7 @@ video {
     grid-template-columns: repeat(auto-fill, 250px);
     justify-content: space-around;
     grid-gap: 1rem;
+    padding: 0 3rem;
 }
 
 .video-card {
@@ -112,6 +113,12 @@ video {
         .inline-player {
             width: 100%;
             border-radius: 6px;
+            transition: all 0.2s;
+
+            &:hover {
+                transform: scale(1.1);
+                transition: all 0.2s;
+            }
         }
 
         &:hover {
@@ -120,8 +127,7 @@ video {
     }
     .video-card-title {
         width: 250px;
-        height: 40px;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         text-align: left;
         display: -webkit-box;
         -webkit-box-orient: vertical;
@@ -145,7 +151,7 @@ video {
 /* video player page */
 .video-player {
     margin-top: 5rem;
-    padding: 0 3rem;
+    padding: 0 5rem;
     display: flex;
     gap: 2rem;
 }
@@ -153,7 +159,7 @@ video {
 // main component
 .video-player-main {
     //border: solid black;
-    width: 65%;
+    width: 100%;
     min-width: 680px;
     // display: flex;
     // flex-direction: column;
@@ -199,7 +205,7 @@ video {
         &:hover .tooltip {
             opacity: 1;
             visibility: visible;
-            transition: all 3s;
+            transition: all 2s;
         }
     }
 
@@ -435,7 +441,8 @@ video {
     height: 90vh;
     // border: solid black;
     overflow-y: scroll;
-    width: 340px;
+    width: 400px;
+    min-width: 350px;
 }
 
 .video-player-side-playlist {
@@ -450,6 +457,7 @@ video {
         width: 100%;
         display: flex;
         gap: 0.3rem;
+        align-items: flex-start;
 
         .video-card-cover {
             min-width: 150px;
@@ -467,9 +475,24 @@ video {
         }
 
         .video-card-title {
-            max-width: 200px;
-            margin: 0;
-            font-size: 1rem;
+            margin-top: 0;
+            width: 250px;
+            text-align: left;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.35s;
+
+            a {
+                transition: all 0.35s;
+                &:hover {
+                    cursor: pointer;
+                    color:#FB7299;
+                    transition: all 0.35s;
+                }  
+            }
         }
     }
 }
