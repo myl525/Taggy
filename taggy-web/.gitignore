@@ -1,5 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
+# local database
+/database/taggy.sqlite
+# test files
+/routes/draft.mjs
+/routes/hash.mjs
+/routes/tests.txt
 # dependencies
 /node_modules
 /.pnp
